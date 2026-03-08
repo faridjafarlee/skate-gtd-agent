@@ -2,14 +2,15 @@ import { describe, it, expect } from "vitest";
 import { renderBanner } from "../../src/cli/banner.js";
 
 describe("Banner", () => {
-  it("renders GTD MANTIS title", () => {
+  it("renders SKATE title and GTD subtitle", () => {
     const out = renderBanner();
-    expect(out).toContain("GTD MANTIS");
+    expect(out).toContain("SKATE");
+    expect(out).toContain("GTD. Agent Orchestration");
   });
 
   it("renders skate ASCII art", () => {
     const out = renderBanner();
-    expect(out).toContain("\\   _   /");
+    expect(out).toContain("\\   ___   /");
     expect(out).toContain("[Skate]");
   });
 

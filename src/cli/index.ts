@@ -381,7 +381,11 @@ Permission modes (-m / --mode):
   dont-ask      No prompts (use session + project allow list)
   bypass        Skip policy checks
 Tool categories: read (read_file), edit (write_file, edit_file, apply_patch), bash (run_command), git, network.`)
-  .action(async function (this: { opts: () => { mode?: string; format?: string } }, name: string, argsJson?: string) {
+  .action(async function (this: { opts: () => { mode?: string; format?: string }; outputHelp: () => void }, name: string, argsJson?: string) {
+    if (name === "--help" || name === "-h") {
+      this.outputHelp();
+      return;
+    }
     const opts = this.opts();
     let args: Record<string, unknown> = {};
     if (argsJson) {
@@ -2536,7 +2540,11 @@ program
   .description("Run a single plan step for an existing task (optional stepDescription override for logs/handoff)")
   .option("-f, --format <fmt>", "Output format: text | json", "text")
   .option("-d, --description <text>", "Override step description for this run (logs and handoff)")
-  .action(async function (this: { opts: () => { format?: string; description?: string } }, idArg: string, stepIndexArg: string, stepDescriptionArg?: string) {
+  .action(async function (this: { opts: () => { format?: string; description?: string }; outputHelp: () => void }, idArg: string, stepIndexArg: string, stepDescriptionArg?: string) {
+    if (idArg === "--help" || idArg === "-h") {
+      this.outputHelp();
+      return;
+    }
     const opts = this.opts();
     await loadAndApplyModelsConfig();
     let task = await getTask(idArg);

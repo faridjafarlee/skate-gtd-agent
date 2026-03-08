@@ -28,7 +28,7 @@ describe("Orchestration resume", () => {
     expect(result.plan!.steps[0]).toMatchObject({ description: "Step 1", order: 1, assignedRole: "builder" });
   });
 
-  it.skipIf(!!process.env.CI)("resumeFrom skips Scout and Planner and bypasses approval", { timeout: 30000 }, async () => {
+  it.skipIf(!!process.env.CI)("resumeFrom skips Scout and Planner and bypasses approval", { timeout: 60000 }, async () => {
     // Skips in CI: may have no models (fast fail) or enabled models (real LLM call, slow). Locally: verify option accepted.
     const result = await runOrchestration({
       taskDescription: "test",
