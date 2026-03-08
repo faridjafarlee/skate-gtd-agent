@@ -1,0 +1,51 @@
+# Build Skate desktop app (Electron) on macOS.
+# Produces unsigned .app, .dmg, .zip. To sign and notarize, set secrets:
+#   APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, CSC_LINK (base64 .p12), CSC_KEY_PASSWORD, optionally CSC_NAME
+# and add afterSign with @electron/notarize when those are present.
+name: Desktop build
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'desktop/**'
+      - 'package.json'
+      - '.github/workflows/desktop-build.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'desktop/**'
+      - 'package.json'
+      - '.github/workflows/desktop-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-mac:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Build CLI (desktop uses ../dist/cli when not bundled)
+        run: npm run build
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build desktop app (macOS)
+        working-directory: desktop
+        run: npm run dist:mac
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: skate-desktop-mac
+          path: desktop/out/

@@ -1,0 +1,10 @@
+;; Seatbelt profile with network allowed (for tasks that need web_fetch, web_search).
+;; Use with: GTD_USE_SANDBOX=1 GTD_SANDBOX_PROFILE=/path/to/scripts/default-network.sb gtd task "..."
+;; CWD and HOME are passed as -D CWD=... -D HOME=... by the runtime.
+(allow default)
+(allow process-exec (literal "/bin/sh"))
+(allow file-read* (subpath (param "CWD")))
+(allow file-write* (subpath (param "CWD")))
+(allow file-read* (subpath (param "HOME")))
+(allow file-write* (subpath (param "HOME")))
+(allow network-outbound)

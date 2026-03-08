@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skate</title>
+  <style>
+    :root {
+      --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: ui-monospace, 'SF Mono', Monaco, 'Cascadia Code', monospace;
+      --font-size: 14px;
+      --sidebar-width: 220px;
+      --sidebar-bg: #12121a;
+      --sidebar-fg: #b0b0b8;
+      --sidebar-active: #7bed9f;
+      --content-bg: #1a1a2e;
+      --content-fg: #eaeaea;
+      --composer-bg: #16213e;
+      --composer-border: #3498db;
+      --output-bg: #0f0f1a;
+      --output-border: #2d2d44;
+      --output-fg: #eaeaea;
+      --error-color: #e74c3c;
+      --success-color: #2ecc71;
+      --accent: #3498db;
+      --muted: #888;
+    }
+    [data-theme="light"] {
+      --sidebar-bg: #f0f0f4;
+      --sidebar-fg: #333;
+      --sidebar-active: #27ae60;
+      --content-bg: #fafafa;
+      --content-fg: #1a1a1a;
+      --composer-bg: #fff;
+      --composer-border: #3498db;
+      --output-bg: #f5f5f5;
+      --output-border: #ddd;
+      --output-fg: #1a1a1a;
+      --error-color: #c0392b;
+      --success-color: #27ae60;
+      --accent: #2980b9;
+      --muted: #666;
+    }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme]) {
+        --sidebar-bg: #f0f0f4;
+        --sidebar-fg: #333;
+        --sidebar-active: #27ae60;
+        --content-bg: #fafafa;
+        --content-fg: #1a1a1a;
+        --composer-bg: #fff;
+        --output-bg: #f5f5f5;
+        --output-border: #ddd;
+        --output-fg: #1a1a1a;
+        --error-color: #c0392b;
+        --success-color: #27ae60;
+        --accent: #2980b9;
+        --muted: #666;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-ui);
+      font-size: var(--font-size);
+      background: var(--content-bg);
+      color: var(--content-fg);
+      display: flex;
+      flex-direction: row;
+    }
+    .app-sidebar {
+      width: var(--sidebar-width);
+      min-width: 48px;
+      max-width: 400px;
+      background: var(--sidebar-bg);
+      color: var(--sidebar-fg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: width 0.15s ease, min-width 0.15s ease;
+    }
+    .app-sidebar.collapsed {
+      width: 48px;
+      min-width: 48px;
+    }
+    .app-sidebar .sidebar-header {
+      padding: 12px 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--sidebar-active);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 40px;
+    }
+    .app-sidebar.collapsed .sidebar-header span { display: none; }
+    .sidebar-toggle {
+      background: none;
+      border: none;
+      color: var(--sidebar-fg);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+    .sidebar-toggle:hover { background: rgba(255,255,255,0.08); color: var(--content-fg); }
+    .sidebar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .sidebar-nav {
+      list-style: none;
+      margin: 0;
+      padding: 8px 0;
+    }
+    .sidebar-nav li { margin: 0; }
+    .sidebar-nav a, .sidebar-nav button.nav-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 12px;
+      color: var(--sidebar-fg);
+      text-decoration: none;
+      border: none;
+      background: none;
+      font: inherit;
+      cursor: pointer;
+      text-align: left;
+    }
+    .sidebar-nav a:hover, .sidebar-nav button.nav-link:hover { background: rgba(255,255,255,0.06); color: var(--content-fg); }
+    .sidebar-nav a.active, .sidebar-nav button.nav-link.active { color: var(--sidebar-active); font-weight: 500; }
+    .sidebar-nav .icon { width: 20px; flex-shrink: 0; text-align: center; }
+    .app-sidebar.collapsed .sidebar-nav .nav-label { display: none; }
+    .app-sidebar.collapsed .sidebar-panes { display: none; }
+    .sidebar-resize {
+      width: 4px;
+      cursor: col-resize;
+      background: transparent;
+      flex-shrink: 0;
+    }
+    .sidebar-resize:hover, .sidebar-resize:active { background: var(--accent); }
+    .app-sidebar.collapsed + .sidebar-resize { display: none; }
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 16px;
+    }
+    .composer { margin-bottom: 12px; flex-shrink: 0; }
+    .composer-row { display: flex; flex-direction: column; gap: 8px; }
+    .composer-row textarea {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px 12px;
+      border: 1px solid var(--composer-border);
+      border-radius: 8px;
+      background: var(--composer-bg);
+      color: var(--content-fg);
+      font-family: var(--font-ui);
+      font-size: var(--font-size);
+      resize: vertical;
+    }
+    .composer-row textarea::placeholder { color: var(--muted); }
+    .composer-buttons { display: flex; gap: 8px; }
+    .composer-toolbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+    .composer-toolbar select { padding: 4px 8px; border-radius: 6px; background: var(--composer-bg); color: var(--content-fg); border: 1px solid var(--output-border); font-size: 13px; }
+    .composer-toolbar button { padding: 4px 10px; font-size: 12px; background: var(--output-border); color: var(--content-fg); border: none; border-radius: 6px; cursor: pointer; }
+    .composer-toolbar button:hover { background: var(--accent); }
+    .composer-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+    .composer-check input { margin: 0; }
+    .composer-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .attachments-list { margin-top: 6px; font-size: 12px; color: var(--muted); }
+    .attachments-list span { margin-right: 8px; }
+    .attachments-list .remove-attach { margin-left: 4px; cursor: pointer; color: var(--error-color); }
+    .blocked-approval { margin-top: 8px; padding: 10px; background: var(--output-bg); border: 1px solid var(--accent); border-radius: 8px; }
+    .blocked-approval .blocked-label { margin: 0 0 8px; font-size: 13px; }
+    .blocked-approval .blocked-actions { display: flex; gap: 8px; }
+    .blocked-approval .blocked-actions button { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; border: 1px solid var(--accent); background: var(--composer-bg); color: var(--content-fg); }
+    .blocked-approval .blocked-actions button:hover { background: var(--accent); color: #fff; }
+    .composer button {
+      padding: 10px 20px;
+      background: var(--success-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-ui);
+    }
+    .composer button:hover { filter: brightness(1.1); }
+    .composer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .composer button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .composer .cancel-btn { background: var(--output-border); color: var(--content-fg); }
+    .composer .cancel-btn:hover { background: var(--error-color); color: #fff; }
+    .composer-row textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
+    .running-state { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+    .running-state .spinner { width: 16px; height: 16px; border: 2px solid var(--output-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .completion-summary { margin-top: 8px; padding: 10px; background: var(--output-bg); border: 1px solid var(--output-border); border-radius: 8px; font-size: 13px; }
+    .completion-summary .task-id { color: var(--success-color); }
+    .failure-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .failure-actions button { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-family: var(--font-ui); border: 1px solid var(--accent); background: var(--composer-bg); color: var(--content-fg); }
+    .failure-actions button:hover { background: var(--accent); color: #fff; }
+    .continue-last-wrap { margin-bottom: 8px; }
+    .link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; padding: 0; text-decoration: underline; font-family: var(--font-ui); }
+    .link-btn:hover { color: var(--sidebar-active); }
+    .link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .task-item .fork-btn { margin-left: 6px; padding: 0 6px; font-size: 11px; background: none; border: none; color: var(--accent); cursor: pointer; text-decoration: underline; }
+    .task-item .fork-btn:hover { color: var(--sidebar-active); }
+    .transcript-wrap {
+      flex: 1;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--output-border);
+      border-radius: 8px;
+      background: var(--output-bg);
+      overflow: hidden;
+    }
+    .transcript-toolbar {
+      flex-shrink: 0;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+      background: var(--output-border);
+      border-bottom: 1px solid var(--output-border);
+    }
+    .transcript-toolbar button {
+      padding: 4px 10px;
+      font-size: 12px;
+      background: transparent;
+      color: var(--content-fg);
+      border: 1px solid var(--composer-border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font-ui);
+    }
+    .transcript-toolbar button:hover { background: rgba(52,152,219,0.2); }
+    .transcript-toolbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .transcript {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: calc(var(--font-size) - 1px);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .transcript.error { color: var(--error-color); }
+    .transcript .code-block {
+      display: block;
+      margin: 8px 0;
+      padding: 12px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+      overflow-x: auto;
+      font-family: var(--font-mono);
+    }
+    [data-theme="light"] .transcript .code-block { background: rgba(0,0,0,0.06); }
+    .transcript .code-block .lang { color: var(--muted); font-size: 0.85em; margin-bottom: 4px; }
+    .transcript .diff-add { color: #2ecc71; }
+    .transcript .diff-remove { color: #e74c3c; }
+    .sidebar-panes { flex: 1; min-height: 0; overflow: auto; padding: 0 8px 8px; }
+    .pane { display: none; flex-direction: column; overflow: auto; }
+    .pane.active { display: flex; }
+    .pane h2 { font-size: 0.95rem; margin: 0 0 8px; color: var(--sidebar-active); }
+    .pane-muted { color: var(--muted); font-size: 13px; margin: 0; }
+    .pane-tasks .task-list { padding: 0; margin: 0; list-style: none; }
+    .pane-tasks .task-list h2 { font-size: 0.95rem; color: var(--accent); margin: 0 0 8px; }
+    .task-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--output-border);
+      font-size: 13px;
+    }
+    .task-item .id { color: var(--success-color); margin-right: 8px; }
+    .task-item .status { color: #f1c40f; }
+    .task-item .status.done { color: var(--success-color); }
+    .task-item .status.fail { color: var(--error-color); }
+    .pane-history { padding: 8px 0; }
+    .pane-settings label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    .pane-settings select, .pane-settings input[type="range"] { margin-bottom: 12px; }
+    .pane-settings select {
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: var(--composer-bg);
+      color: var(--content-fg);
+      border: 1px solid var(--output-border);
+      font-family: var(--font-ui);
+    }
+    .pane-settings .setting-row { margin-bottom: 16px; }
+    .pane-settings .setting-section { display: flex; flex-direction: column; gap: 6px; }
+    .pane-settings .setting-value { font-size: 12px; color: var(--muted); margin-right: 8px; word-break: break-all; }
+    .pane-settings .setting-hint { font-size: 11px; color: var(--muted); margin: 4px 0 8px; }
+    .pane-settings .login-section { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+    .pane-settings .login-section input[type="password"] { min-width: 180px; padding: 6px 8px; }
+    .pane-settings #configJson { width: 100%; max-width: 100%; font-family: var(--font-mono); font-size: 12px; padding: 8px; border-radius: 6px; background: var(--output-bg); border: 1px solid var(--output-border); color: var(--content-fg); }
+    .workspace-row { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .command-palette { position: fixed; top: 40px; left: 50%; transform: translateX(-50%); width: 320px; max-width: 90vw; background: var(--sidebar-bg); border: 1px solid var(--accent); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 1000; padding: 8px; }
+    .command-palette input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--output-border); background: var(--content-bg); color: var(--content-fg); font-size: 14px; margin-bottom: 6px; }
+    .command-palette ul { list-style: none; margin: 0; padding: 0; max-height: 200px; overflow: auto; }
+    .command-palette li { padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .command-palette li:hover, .command-palette li.selected { background: var(--accent); color: #fff; }
+    .workspace-row span { margin-right: 8px; }
+    .mcp-list { list-style: none; margin: 0 0 8px; padding: 0; font-size: 12px; }
+    .mcp-list li { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+    .mcp-list input[type="checkbox"] { margin-right: 4px; }
+    .mcp-add { display: flex; gap: 6px; }
+    .mcp-add input { flex: 1; padding: 4px 8px; font-size: 12px; border-radius: 4px; border: 1px solid var(--output-border); background: var(--composer-bg); color: var(--content-fg); }
+    .history-search { width: 100%; margin-bottom: 8px; padding: 6px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--output-border); background: var(--composer-bg); color: var(--content-fg); }
+    .history-list { max-height: 200px; overflow: auto; }
+    .history-list .task-item { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .history-list .archive-btn { margin-left: auto; font-size: 11px; padding: 2px 6px; }
+    .history-list .open-folder-btn { font-size: 11px; padding: 2px 6px; margin-right: 4px; }
+    .history-list .muted { color: var(--muted); font-size: 11px; }
+    .git-row { font-size: 12px; margin-top: 4px; }
+    .git-row .setting-label { margin-right: 6px; }
+    .status-line { flex-shrink: 0; font-size: 11px; color: var(--muted); padding: 6px 0 0; border-top: 1px solid var(--output-border); margin-top: 8px; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body>
+  <aside class="app-sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+    <div class="sidebar-header">
+      <span>Skate</span>
+      <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">≡</button>
+    </div>
+    <ul class="sidebar-nav">
+      <li><a href="#tasks" class="nav-link active" id="navTasks" data-pane="tasks"><span class="icon">◇</span><span class="nav-label">Tasks</span></a></li>
+      <li><a href="#history" class="nav-link" id="navHistory" data-pane="history"><span class="icon">◷</span><span class="nav-label">History</span></a></li>
+      <li><a href="#settings" class="nav-link" id="navSettings" data-pane="settings"><span class="icon">⚙</span><span class="nav-label">Settings</span></a></li>
+    </ul>
+    <div class="sidebar-panes">
+      <div class="pane pane-tasks active" id="paneTasks" aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recent tasks</h2>
+        <div id="taskList" class="task-list" aria-live="polite">Loading…</div>
+      </div>
+      <div class="pane pane-history" id="paneHistory" hidden>
+        <h2>Saved chats</h2>
+        <input type="text" id="historySearchInput" class="history-search" placeholder="Search by description or ID…" aria-label="Search sessions" />
+        <select id="historyStatusFilter" aria-label="Filter by status">
+          <option value="">All</option>
+          <option value="completed">Completed</option>
+          <option value="failed">Failed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <button type="button" id="resumeAllBtn" class="link-btn" aria-label="Resume all workspaces">Resume all</button>
+        <div id="historyList" class="task-list history-list" aria-live="polite">Loading…</div>
+        <button type="button" id="historyLoadMoreBtn" class="link-btn" aria-label="Load more" style="display:none;">Load more</button>
+      </div>
+      <div class="pane pane-settings" id="paneSettings" hidden>
+        <h2>Settings</h2>
+        <div class="workspace-row">Working directory: <span id="cwd">—</span> <button type="button" id="changeFolderBtn" aria-label="Change project folder">Change folder</button> <button type="button" id="openInTerminalBtn" class="link-btn" aria-label="Open in Terminal">Open in Terminal</button></div>
+        <div class="workspace-row git-row" id="gitRow" hidden><span class="setting-label">Git branch:</span> <span id="gitBranchDisplay">—</span> <button type="button" id="openDiffBtn" class="link-btn" aria-label="Open diff">Open diff</button></div>
+        <div class="setting-row">
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect" aria-label="Theme">
+            <option value="system">System</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="fontSizeRange">Font size</label>
+          <input type="range" id="fontSizeRange" min="12" max="20" value="14" aria-label="Font size" />
+          <span id="fontSizeValue">14</span>px
+        </div>
+        <div class="setting-row">
+          <label for="qualityProfileSelect">Quality profile</label>
+          <select id="qualityProfileSelect" aria-label="Quality profile">
+            <option value="">Default</option>
+            <option value="fast">Fast</option>
+            <option value="balanced">Balanced</option>
+            <option value="thorough">Thorough</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="approvalPolicySelect">Approval policy</label>
+          <select id="approvalPolicySelect" aria-label="Approval policy">
+            <option value="">Auto</option>
+            <option value="always">Always ask</option>
+            <option value="never">Never</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="modelSelect">Model</label>
+          <select id="modelSelect" aria-label="Model">
+            <option value="">Default</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4o-mini">GPT-4o mini</option>
+            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="claude-3-haiku">Claude 3 Haiku</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="profileSelect">Profile (GTD_ENV)</label>
+          <select id="profileSelect" aria-label="Config profile">
+            <option value="">default</option>
+            <option value="dev">dev</option>
+            <option value="prod">prod</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <label for="contextSizeSelect">Context size</label>
+          <select id="contextSizeSelect" aria-label="Context size (tokens)">
+            <option value="">Default</option>
+            <option value="32000">32k</option>
+            <option value="128000">128k</option>
+            <option value="200000">200k</option>
+            <option value="1000000">1M</option>
+          </select>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Config path</span>
+          <span id="configPathDisplay" class="setting-value">—</span>
+          <button type="button" id="openConfigBtn" aria-label="Open config folder">Open config folder</button>
+        </div>
+        <div class="setting-row">
+          <label for="configJson">Config (raw JSON)</label>
+          <textarea id="configJson" rows="4" placeholder="Optional: paste config JSON" aria-label="Config JSON"></textarea>
+          <button type="button" id="saveConfigBtn" aria-label="Save config">Save config</button>
+        </div>
+        <div class="setting-row setting-section">
+          <span class="setting-label">Feature flags</span>
+          <label class="composer-check"><input type="checkbox" id="flagStreaming" aria-label="Streaming" /> Streaming</label>
+          <label class="composer-check"><input type="checkbox" id="flagMcp" aria-label="MCP" /> MCP</label>
+        </div>
+        <div class="setting-row">
+          <label class="composer-check"><input type="checkbox" id="noColorCheck" aria-label="Disable CLI color" /> NO_COLOR (disable CLI color)</label>
+        </div>
+        <div class="setting-row setting-section">
+          <span class="setting-label">MCP servers</span>
+          <ul id="mcpServerList" class="mcp-list"></ul>
+          <div class="mcp-add">
+            <input type="text" id="mcpServerInput" placeholder="Server name or URL" aria-label="MCP server" />
+            <button type="button" id="mcpAddBtn" aria-label="Add MCP server">Add</button>
+          </div>
+        </div>
+        <div class="setting-row setting-section">
+          <span class="setting-label">API key (login)</span>
+          <p class="setting-hint">Stored encrypted; never written to config files. Exposed to CLI via env when running tasks.</p>
+          <div id="loginSection" class="login-section">
+            <input type="password" id="apiKeyInput" placeholder="Paste API key" aria-label="API key" autocomplete="off" />
+            <button type="button" id="loginBtn" aria-label="Save key">Save key</button>
+            <button type="button" id="validateKeyBtn" aria-label="Validate key">Validate</button>
+          </div>
+          <div id="logoutSection" class="login-section" style="display:none;">
+            <span id="loginStatusText" class="setting-value">Logged in (key stored)</span>
+            <button type="button" id="logoutBtn" aria-label="Remove key">Logout</button>
+          </div>
+          <p class="setting-hint">OAuth/device flow: can be added when the backend supports it (in-app browser).</p>
+        </div>
+        <div class="setting-row">
+          <span class="setting-label">Rules path</span>
+          <span id="rulesPathDisplay" class="setting-value">—</span>
+          <button type="button" id="reloadRulesBtn" aria-label="Reload rules">Reload</button>
+        </div>
+        <div class="setting-row setting-section">
+          <span class="setting-label">Debug</span>
+          <button type="button" id="showConfigLayersBtn" aria-label="Show config layers">Show config layers</button>
+          <button type="button" id="exportDiagnosticsBtn" aria-label="Export diagnostics">Export diagnostics</button>
+          <button type="button" id="reportIssueBtn" aria-label="Report issue or send feedback">Report issue</button>
+        </div>
+        <p class="setting-hint" id="permissionsHint">Permissions: This app does not use macOS App Sandbox or Full Disk Access. It only accesses its own data, your chosen workspace, and <code>~/.skate</code>. See desktop/docs/PLATFORM.md for details.</p>
+      </div>
+    </div>
+  </aside>
+  <div class="command-palette" id="commandPalette" hidden role="dialog" aria-label="Command palette">
+    <input type="text" id="commandPaletteInput" placeholder="Type a command…" aria-label="Command" />
+    <ul id="commandPaletteList"></ul>
+  </div>
+  <div class="sidebar-resize" id="sidebarResize" aria-hidden="true"></div>
+  <div class="main-content">
+    <main role="main" class="content-area" aria-label="Skate task runner">
+      <div class="composer" role="form" aria-label="New task">
+        <div class="composer-row">
+          <label for="taskInput" class="sr-only">Task description</label>
+          <textarea id="taskInput" rows="3" placeholder="Describe your task… (Cmd+Enter to run)" aria-label="Task description"></textarea>
+          <div class="composer-buttons">
+            <button type="button" id="runBtn" aria-label="Run task">Run task</button>
+            <button type="button" id="cancelBtn" class="cancel-btn" aria-label="Cancel task" hidden>Cancel</button>
+          </div>
+        </div>
+        <div class="composer-toolbar">
+          <select id="templateSelect" aria-label="Template">
+            <option value="">No template</option>
+          </select>
+          <button type="button" id="attachBtn" aria-label="Attach files">Attach</button>
+          <button type="button" id="attachPathBtn" aria-label="Insert path">@path</button>
+          <label class="composer-check"><input type="checkbox" id="ephemeralCheck" aria-label="Don't save to history" /> Don't save to history</label>
+          <label class="composer-check"><input type="checkbox" id="keepDraftCheck" aria-label="Keep draft after send" /> Keep draft</label>
+        </div>
+        <div class="composer-meta" id="composerMeta" aria-live="polite">0 chars · 0 words · ~0 tokens</div>
+        <div class="attachments-list" id="attachmentsList" hidden></div>
+      </div>
+      <div class="continue-last-wrap" id="continueLastWrap" hidden>
+        <button type="button" id="continueLastBtn" class="link-btn" aria-label="Continue last task">Continue last task</button>
+      </div>
+      <div class="running-state" id="runningState" hidden aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="step-name" id="stepName">Running…</span>
+      </div>
+      <div class="transcript-wrap">
+        <div class="transcript-toolbar">
+          <button type="button" id="copyTranscriptBtn" aria-label="Copy transcript">Copy</button>
+          <button type="button" id="exportTranscriptBtn" aria-label="Export as Markdown">Export (MD)</button>
+          <button type="button" id="exportTranscriptJsonBtn" aria-label="Export as JSON">Export (JSON)</button>
+          <button type="button" id="shareTranscriptBtn" aria-label="Share session">Share</button>
+          <button type="button" id="copyCommandBtn" aria-label="Copy run command">Copy command</button>
+        </div>
+        <div class="transcript" id="output" role="log" aria-live="polite" aria-label="Task output">Output will appear here. Run a task or open a project folder.</div>
+      </div>
+      <div class="completion-summary" id="completionSummary" hidden></div>
+      <div class="blocked-approval" id="blockedApproval" hidden>
+        <p class="blocked-label">Approval required</p>
+        <div class="blocked-actions">
+          <button type="button" id="approveBlockedBtn" aria-label="Approve">Approve</button>
+          <button type="button" id="rejectBlockedBtn" aria-label="Reject">Reject</button>
+        </div>
+      </div>
+      <div class="failure-actions" id="failureActions" hidden>
+        <button type="button" id="retryBtn" aria-label="Retry task">Retry</button>
+        <button type="button" id="approveBtn" aria-label="Approve and continue">Approve</button>
+      </div>
+      <footer class="status-line" id="statusLine" aria-live="polite">Model: — · Context: — · Session: —</footer>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
